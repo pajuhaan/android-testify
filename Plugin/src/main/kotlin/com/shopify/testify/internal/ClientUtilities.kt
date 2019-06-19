@@ -30,9 +30,8 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 
-internal fun Project.getDestinationImageDirectory(language: String = Device.language()): String {
-    return "${project.testifySettings.baselineSourceDir}/${Device.deviceKey(language)}/"
-}
+internal val Project.destinationImageDirectory: String
+    get() = "${project.testifySettings.baselineSourceDir}/"
 
 private typealias OutputHandler = (String, StringBuilder) -> Unit
 
@@ -115,10 +114,13 @@ internal fun File.deleteFilesWithSubstring(substring: String) {
 }
 
 @Suppress("UNCHECKED_CAST")
-internal fun <T> String.fromEnv(defaultValue: T): T {
+internal inline fun <reified T> String.fromEnv(defaultValue: T): T {
     val envVal: String? = System.getenv(this)
     return if (envVal?.isNotEmpty() == true) {
-        envVal as T
+        when (defaultValue) {
+            is Boolean -> envVal.toBoolean() as T
+            else -> envVal as T
+        }
     } else {
         defaultValue
     }

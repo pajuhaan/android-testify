@@ -24,30 +24,43 @@
 
 package com.shopify.testify
 
+import com.android.build.gradle.AppExtension
+import com.android.build.gradle.TestedExtension
 import com.shopify.testify.internal.android
 import org.gradle.api.GradleException
 import org.gradle.api.Project
 
 internal data class TestifySettings(
-    var applicationPackageId: String,
+
     var baselineSourceDir: String,
     var moduleName: String,
     var outputFileNameFormat: String?,
     var pullWaitTime: Long = 0L,
     var testRunner: String,
     var useSdCard: Boolean,
-    var testContextId: String,
+
+    /**
+     * The package ID for the test APK
+     *
+     * For a typical application, testify requires two APKs: the target apk under test,
+     * and a test apk containing your tests.
+     *
+     * e.g. com.testify.example.test
+     */
     var testPackageId: String,
-    var applicationIdSuffix: String
+
+    /**
+     * The package ID for the APK under test
+     *
+     * For a typical application, testify requires two APKs: the target apk under test,
+     * and a test apk containing your tests.
+     *
+     * e.g. com.testify.example
+     */
+    var targetPackageId: String
 ) {
 
     fun override(extension: TestifyExtension): TestifySettings {
-        if (extension.applicationPackageId?.isNotEmpty() == true) {
-            this.applicationPackageId = extension.applicationPackageId!!
-        }
-        if (extension.applicationIdSuffix?.isNotEmpty() == true) {
-            this.applicationIdSuffix = extension.applicationIdSuffix!!
-        }
         if (extension.baselineSourceDir?.isNotEmpty() == true) {
             this.baselineSourceDir = extension.baselineSourceDir!!
         }
@@ -66,20 +79,17 @@ internal data class TestifySettings(
         if (extension.useSdCard != null) {
             this.useSdCard = extension.useSdCard!!
         }
-        if (extension.testContextId?.isNotEmpty() == true) {
-            this.testContextId = extension.testContextId!!
-        }
         if (extension.testPackageId?.isNotEmpty() == true) {
             this.testPackageId = extension.testPackageId!!
         }
-        if (this.testContextId.isEmpty()) {
-            this.testContextId = createTestContextId(this.applicationPackageId, this.applicationIdSuffix)
+        if (extension.applicationPackageId?.isNotEmpty() == true) {
+            this.targetPackageId = extension.applicationPackageId!!
         }
         return this
     }
 
     fun validate() {
-        if (applicationPackageId.isEmpty()) {
+        if (targetPackageId.isEmpty()) {
             throw GradleExtensionException("""
 
   You must define an `applicationPackageId` in your `testify` gradle extension block:
@@ -92,9 +102,36 @@ internal data class TestifySettings(
     }
 }
 
-fun createTestContextId(applicationPackageId: String, applicationIdSuffix: String): String {
-    return if (applicationPackageId.isEmpty()) "" else "$applicationPackageId$applicationIdSuffix"
-}
+/**
+ * Infer the package ID for the app under test.
+ *
+ * For an application this is usually just the applicationId e.g. com.testify.example
+ * However, the app under test may have been modified by an applicationIdSuffix (e.g. .debug).
+ * Or, it may not be an app at all and could be a library project. In this case, you must specify
+ * the `applicationPackageId` in your `testify` extension block.
+ */
+private val TestedExtension.inferredTargetPackageId: String
+    get() {
+        var targetPackageId: String? = null
+
+        // Prefer the debug variant
+        if (this is AppExtension) {
+            targetPackageId = applicationVariants?.find { it!!.baseName!!.contentEquals("debug") }?.applicationId
+        }
+
+        // For apks without a debug variant, use the default applicationId
+        if (targetPackageId.isNullOrEmpty()) {
+            targetPackageId = this.defaultConfig?.applicationId
+        }
+
+        // If we still do not have a targetPackageId, it is likely a library project
+        // Infer the package from the test configuration
+        if (targetPackageId.isNullOrEmpty()) {
+            targetPackageId = testVariants?.first()?.applicationId
+        }
+
+        return targetPackageId ?: ""
+    }
 
 internal class TestifySettingsFactory {
 
@@ -102,41 +139,36 @@ internal class TestifySettingsFactory {
 
         fun create(project: Project): TestifySettings {
             val android = project.android
-            val applicationPackageId = android.defaultConfig?.applicationId ?: ""
             val assetsSet = android.sourceSets?.getByName("""androidTest""")?.assets
-            val baselineSourceDir = "${assetsSet?.srcDirs?.first()?.path}/screenshots"
+            val baselineSourceDir = "${assetsSet?.srcDirs?.first()?.path}"
             val testRunner = android.defaultConfig.testInstrumentationRunner
-            val applicationIdSuffix = ""
-            val testContextId = createTestContextId(applicationPackageId, applicationIdSuffix)
             val testPackageId = android.testVariants?.first()?.applicationId ?: ""
+            val targetPackageId = android.inferredTargetPackageId
 
             return TestifySettings(
-                applicationPackageId = applicationPackageId,
                 baselineSourceDir = baselineSourceDir,
                 moduleName = project.name,
                 outputFileNameFormat = null,
                 pullWaitTime = 0L,
                 testRunner = testRunner,
                 useSdCard = false,
-                testContextId = testContextId,
                 testPackageId = testPackageId,
-                applicationIdSuffix = applicationIdSuffix
+                targetPackageId = targetPackageId
             )
         }
     }
 }
 
 open class TestifyExtension {
-    var applicationPackageId: String? = null
+
     var baselineSourceDir: String? = null
     var moduleName: String? = null
     var outputFileNameFormat: String? = null
     var pullWaitTime: Long? = null
     var testRunner: String? = null
     var useSdCard: Boolean? = null
-    var testContextId: String? = null
+    var applicationPackageId: String? = null
     var testPackageId: String? = null
-    var applicationIdSuffix: String? = null
 
     companion object {
         const val NAME = "testify"

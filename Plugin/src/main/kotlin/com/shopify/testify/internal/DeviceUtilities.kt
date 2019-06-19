@@ -28,37 +28,54 @@ import com.shopify.testify.testifySettings
 import org.gradle.api.Project
 import java.io.File
 
-internal fun Project.getDeviceImageDirectory(): String {
-    return if (this.testifySettings.useSdCard)
-        "/sdcard/testify_images/"
-    else
-        "/data/data/${this.testifySettings.testContextId}/app_images/"
-}
+internal val Project.deviceImageDirectory: String
+    get() {
+        return if (this.testifySettings.useSdCard)
+            "/sdcard/testify_images/"
+        else
+            "/data/data/${this.testifySettings.targetPackageId}/app_images/"
+    }
 
-internal fun Project.listFailedScreenshots(): List<String> {
-    val src = getDeviceImageDirectory()
-    val dst = getDestinationImageDirectory()
+internal val Project.screenshotDirectory: String
+    get() = "${this.deviceImageDirectory}$SCREENSHOT_DIR"
 
-    val log = Adb()
-        .argument("shell ls $src*.png")
+private fun Adb.listFiles(path: String): List<String> {
+    val log = this
+        .shell()
+        .argument("ls $path")
         .argument("2>/dev/null")
         .execute()
 
-    val files = ArrayList<String>()
-    log.lines().forEach {
-        if (it.isNotEmpty()) {
-            files.add(it.replace(src, dst))
-        }
-    }
+    return log.lines().filter { it.isNotEmpty() }.map { "$path/$it" }
+}
 
+internal fun Project.listFailedScreenshotsWithPath(): List<String> {
+    val src = screenshotDirectory
+
+    val rootDir = Adb().listFiles(src)
+    val files = rootDir.flatMap { Adb().listFiles(it) }
+
+    if (this.isVerbose) {
+        files.forEach { println(AnsiFormat.Purple, "\t$it") }
+    }
     return files
+}
+
+internal fun Project.listFailedScreenshots(): List<String> {
+    val src = screenshotDirectory
+    val dst = destinationImageDirectory
+
+    val files = this.listFailedScreenshotsWithPath()
+    return files.map { it.replace(src, dst) }
 }
 
 internal fun File.deleteOnDevice() {
     Adb()
-        .argument("shell")
+        .shell()
         .argument("rm")
         .argument(this.path)
         .stream(true)
         .execute()
 }
+
+const val SCREENSHOT_DIR = "screenshots"

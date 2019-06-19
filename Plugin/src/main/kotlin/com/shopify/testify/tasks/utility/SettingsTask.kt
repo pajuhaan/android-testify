@@ -34,15 +34,14 @@ open class SettingsTask : TestifyUtilityTask() {
 
     override fun taskAction() {
         with(project.testifySettings) {
-            println("  applicationPackageId = $applicationPackageId")
             println("  baselineSourceDir    = $baselineSourceDir")
             println("  moduleName           = $moduleName")
             println("  outputFileNameFormat = $outputFileNameFormat")
             println("  pullWaitTime         = $pullWaitTime")
             println("  testRunner           = $testRunner")
             println("  useSdCard            = $useSdCard")
-            println("  testContextId        = $testContextId")
             println("  testPackageId        = $testPackageId")
+            println("  targetPackageId      = $targetPackageId")
         }
     }
 

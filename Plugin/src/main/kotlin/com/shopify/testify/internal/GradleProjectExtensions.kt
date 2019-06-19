@@ -31,3 +31,9 @@ import org.gradle.api.Project
 val Project.android: TestedExtension
     get() = this.properties["android"] as? TestedExtension
         ?: throw GradleException("Gradle project must contain an `android` closure")
+
+val Project.isVerbose: Boolean
+    get() = (this.properties["verbose"] as? String)?.toBoolean() ?: false
+
+val Project.useLocale: Boolean
+    get() = (this.properties["useLocale"] as? String)?.toBoolean() ?: false
