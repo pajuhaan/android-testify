@@ -78,6 +78,8 @@ android {
         androidTestImplementation depends.androidx.test.rules
         androidTestImplementation depends.androidx.test.espresso.core
         androidTestImplementation depends.androidx.test.espresso.contrib
+        androidTestImplementation depends.google.material
+        androidTestImplementation depends.androidx.appcompat
     }
 }
 

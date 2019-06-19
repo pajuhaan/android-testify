@@ -42,7 +42,7 @@ class DeviceIdentifierTest {
         doReturn("380dp").whenever(formatter).deviceDensity
         doReturn("1024").whenever<DeviceIdentifier.DeviceStringFormatter>(formatter).deviceHeight
         doReturn("800").whenever<DeviceIdentifier.DeviceStringFormatter>(formatter).deviceWidth
-        doReturn("en").whenever(formatter).language
+        doReturn("en_US").whenever(formatter).locale
         doReturn("Class").whenever<DeviceIdentifier.DeviceStringFormatter>(formatter).testClass
         doReturn("method").whenever(formatter).getTestName()
 
@@ -51,7 +51,7 @@ class DeviceIdentifierTest {
 
     @Test
     fun testFolderNameFormat() {
-        assertEquals("21-800x1024@380dp-en", DeviceIdentifier.formatDeviceString(formatter, DeviceIdentifier.DEFAULT_FOLDER_FORMAT))
+        assertEquals("21-800x1024@380dp-en_US", DeviceIdentifier.formatDeviceString(formatter, DeviceIdentifier.DEFAULT_FOLDER_FORMAT))
     }
 
     @Test
@@ -61,11 +61,11 @@ class DeviceIdentifierTest {
 
     @Test
     fun testCIFormat() {
-        assertEquals("21-800x1024@380dp-en#Class_method", DeviceIdentifier.formatDeviceString(formatter, "a-wxh@d-l#c_n"))
+        assertEquals("21-800x1024@380dp-en_US#Class_method", DeviceIdentifier.formatDeviceString(formatter, "a-wxh@d-l#c_n"))
     }
 
     @Test
     fun testCustomFormat() {
-        assertEquals("21Class380dp1024enmethod800", DeviceIdentifier.formatDeviceString(formatter, "acdhlnw"))
+        assertEquals("21Class380dp1024en_USmethod800", DeviceIdentifier.formatDeviceString(formatter, "acdhlnw"))
     }
 }
